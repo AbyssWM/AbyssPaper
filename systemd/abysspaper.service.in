@@ -1,6 +1,6 @@
 [Unit]
 Description=Fast, IPC-controlled wallpaper utility for Abyssland.
-Documentation=https://wiki.abyssland.org/Abyss-Ecosystem/abysspaper/
+Documentation=https://github.com/AbyssWM/AbyssPaper
 PartOf=graphical-session.target
 Requires=graphical-session.target
 After=graphical-session.target
