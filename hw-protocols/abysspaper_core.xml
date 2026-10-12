@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<protocol name="hyprpaper_core" version="2">
+<protocol name="abysspaper_core" version="2">
   <copyright>
     BSD 3-Clause License
 
-    Copyright (c) 2025, Hypr Development
+    Copyright (c) 2025, Abyss Development
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions are met:
@@ -31,16 +31,16 @@
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   </copyright>
 
-  <object name="hyprpaper_core_manager" version="2">
+  <object name="abysspaper_core_manager" version="2">
     <description summary="manager object">
-      This is the core manager object for hyprpaper operations
+      This is the core manager object for abysspaper operations
     </description>
 
     <c2s name="get_wallpaper_object">
       <description summary="Get a wallpaper object">
         Creates a wallpaper object
       </description>
-      <returns iface="hyprpaper_wallpaper"/>
+      <returns iface="abysspaper_wallpaper"/>
     </c2s>
 
     <s2c name="add_monitor">
@@ -67,7 +67,7 @@
       <description summary="Get a status object">
         Creates a status object
       </description>
-      <returns iface="hyprpaper_status"/>
+      <returns iface="abysspaper_status"/>
     </c2s>
   </object>
 
@@ -88,7 +88,7 @@
     <value idx="2" name="unknown_error" description="unknown error"/>
   </enum>
 
-  <object name="hyprpaper_wallpaper" version="1">
+  <object name="abysspaper_wallpaper" version="1">
     <description summary="wallpaper object">
       This is an object describing a wallpaper
     </description>
@@ -113,7 +113,7 @@
         Set a monitor for the wallpaper. Setting this to empty (or not setting at all) will
         treat this as a wildcard fallback.
 
-        See hyprpaper_core_manager.add_monitor and hyprpaper_core_manager.remove_monitor
+        See abysspaper_core_manager.add_monitor and abysspaper_core_manager.remove_monitor
         for tracking monitor names.
       </description>
       <arg name="monitor_name" type="varchar" summary="monitor name"/>
@@ -139,7 +139,7 @@
       <description summary="Operation failed">
         Wallpaper was not applied. See the error field for more information.
       </description>
-      <arg name="error" type="enum" interface="hyprpaper_wallpaper_application_error" summary="path"/>
+      <arg name="error" type="enum" interface="abysspaper_wallpaper_application_error" summary="path"/>
     </s2c>
 
     <c2s name="destroy" destructor="true">
@@ -149,7 +149,7 @@
     </c2s>
   </object>
 
-  <object name="hyprpaper_status" version="2">
+  <object name="abysspaper_status" version="2">
     <description summary="status object">
       This is an object which will emit various status updates.
     </description>

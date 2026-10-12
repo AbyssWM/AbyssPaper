@@ -4,9 +4,9 @@
 #include "ui/UI.hpp"
 #include "config/ConfigManager.hpp"
 
-#include <hyprutils/cli/ArgumentParser.hpp>
+#include <abyssutils/cli/ArgumentParser.hpp>
 
-using namespace Hyprutils::CLI;
+using namespace Abyssutils::CLI;
 
 int main(int argc, const char** argv, const char** envp) {
 
@@ -14,7 +14,7 @@ int main(int argc, const char** argv, const char** envp) {
 
     ASSERT(parser.registerStringOption("config", "c", "Set a custom config path"));
     ASSERT(parser.registerBoolOption("verbose", "", "Enable more logging"));
-    ASSERT(parser.registerBoolOption("version", "v", "Show hyprpaper's version"));
+    ASSERT(parser.registerBoolOption("version", "v", "Show abysspaper's version"));
     ASSERT(parser.registerBoolOption("help", "h", "Show the help menu"));
 
     if (const auto ret = parser.parse(); !ret) {
@@ -23,12 +23,12 @@ int main(int argc, const char** argv, const char** envp) {
     }
 
     if (parser.getBool("help").value_or(false)) {
-        std::println("{}", parser.getDescription(std::format("hyprpaper v{}", HYPRPAPER_VERSION)));
+        std::println("{}", parser.getDescription(std::format("abysspaper v{}", ABYSSPAPER_VERSION)));
         return 0;
     }
 
     if (parser.getBool("version").value_or(false)) {
-        std::println("hyprpaper v{}", HYPRPAPER_VERSION);
+        std::println("abysspaper v{}", ABYSSPAPER_VERSION);
         return 0;
     }
 
@@ -37,7 +37,7 @@ int main(int argc, const char** argv, const char** envp) {
         g_state->verbose = true;
     }
 
-    g_logger->log(LOG_DEBUG, "Welcome to hyprpaper!\nbuilt from commit {} ({})", GIT_COMMIT_HASH, GIT_COMMIT_MESSAGE);
+    g_logger->log(LOG_DEBUG, "Welcome to abysspaper!\nbuilt from commit {} ({})", GIT_COMMIT_HASH, GIT_COMMIT_MESSAGE);
 
     g_config = makeUnique<CConfigManager>(std::string{parser.getString("config").value_or("")});
     if (!g_config->init())

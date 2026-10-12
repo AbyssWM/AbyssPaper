@@ -8,52 +8,52 @@
 using namespace IPC;
 using namespace std::string_literals;
 
-constexpr const char*         SOCKET_NAME      = ".hyprpaper.sock";
+constexpr const char*         SOCKET_NAME      = ".abysspaper.sock";
 constexpr const size_t        HP_PROTO_VERSION = 2;
 
-static SP<CHyprpaperCoreImpl> g_coreImpl;
+static SP<CAbysspaperCoreImpl> g_coreImpl;
 
-CWallpaperObject::CWallpaperObject(SP<CHyprpaperWallpaperObject>&& obj) : m_object(std::move(obj)) {
+CWallpaperObject::CWallpaperObject(SP<CAbysspaperWallpaperObject>&& obj) : m_object(std::move(obj)) {
     m_object->setDestroy([this]() { std::erase_if(g_IPCSocket->m_wallpaperObjects, [this](const auto& e) { return e.get() == this; }); });
     m_object->setOnDestroy([this]() { std::erase_if(g_IPCSocket->m_wallpaperObjects, [this](const auto& e) { return e.get() == this; }); });
 
     m_object->setPath([this](const char* s) {
         if (m_inert)
-            m_object->error(HYPRPAPER_CORE_WALLPAPER_ERRORS_INERT_WALLPAPER_OBJECT, "Object is inert");
+            m_object->error(ABYSSPAPER_CORE_WALLPAPER_ERRORS_INERT_WALLPAPER_OBJECT, "Object is inert");
 
         m_path = s;
     });
 
-    m_object->setFitMode([this](hyprpaperCoreWallpaperFitMode f) {
+    m_object->setFitMode([this](abysspaperCoreWallpaperFitMode f) {
         if (m_inert)
-            m_object->error(HYPRPAPER_CORE_WALLPAPER_ERRORS_INERT_WALLPAPER_OBJECT, "Object is inert");
+            m_object->error(ABYSSPAPER_CORE_WALLPAPER_ERRORS_INERT_WALLPAPER_OBJECT, "Object is inert");
 
-        if (f > HYPRPAPER_CORE_WALLPAPER_FIT_MODE_TILE)
-            m_object->error(HYPRPAPER_CORE_APPLYING_ERROR_UNKNOWN_ERROR, "Invalid fit mode");
+        if (f > ABYSSPAPER_CORE_WALLPAPER_FIT_MODE_TILE)
+            m_object->error(ABYSSPAPER_CORE_APPLYING_ERROR_UNKNOWN_ERROR, "Invalid fit mode");
         m_fitMode = f;
     });
 
     m_object->setMonitorName([this](const char* s) {
         if (m_inert)
-            m_object->error(HYPRPAPER_CORE_WALLPAPER_ERRORS_INERT_WALLPAPER_OBJECT, "Object is inert");
+            m_object->error(ABYSSPAPER_CORE_WALLPAPER_ERRORS_INERT_WALLPAPER_OBJECT, "Object is inert");
 
         m_monitor = s;
     });
 
     m_object->setApply([this]() {
         if (m_inert)
-            m_object->error(HYPRPAPER_CORE_WALLPAPER_ERRORS_INERT_WALLPAPER_OBJECT, "Object is inert");
+            m_object->error(ABYSSPAPER_CORE_WALLPAPER_ERRORS_INERT_WALLPAPER_OBJECT, "Object is inert");
 
         apply();
     });
 }
 
-static std::string fitModeToStr(hyprpaperCoreWallpaperFitMode m) {
+static std::string fitModeToStr(abysspaperCoreWallpaperFitMode m) {
     switch (m) {
-        case HYPRPAPER_CORE_WALLPAPER_FIT_MODE_CONTAIN: return "contain";
-        case HYPRPAPER_CORE_WALLPAPER_FIT_MODE_COVER: return "cover";
-        case HYPRPAPER_CORE_WALLPAPER_FIT_MODE_TILE: return "tile";
-        case HYPRPAPER_CORE_WALLPAPER_FIT_MODE_STRETCH: return "fit";
+        case ABYSSPAPER_CORE_WALLPAPER_FIT_MODE_CONTAIN: return "contain";
+        case ABYSSPAPER_CORE_WALLPAPER_FIT_MODE_COVER: return "cover";
+        case ABYSSPAPER_CORE_WALLPAPER_FIT_MODE_TILE: return "tile";
+        case ABYSSPAPER_CORE_WALLPAPER_FIT_MODE_STRETCH: return "fit";
         default: return "cover";
     }
 }
@@ -63,23 +63,23 @@ void CWallpaperObject::apply() {
     m_inert = true;
 
     if (!m_monitor.empty() && !g_matcher->outputExists(m_monitor)) {
-        m_object->sendFailed(HYPRPAPER_CORE_APPLYING_ERROR_INVALID_MONITOR);
+        m_object->sendFailed(ABYSSPAPER_CORE_APPLYING_ERROR_INVALID_MONITOR);
         return;
     }
 
     if (m_path.empty()) {
-        m_object->sendFailed(HYPRPAPER_CORE_APPLYING_ERROR_INVALID_PATH);
+        m_object->sendFailed(ABYSSPAPER_CORE_APPLYING_ERROR_INVALID_PATH);
         return;
     }
 
     if (m_path[0] != '/') {
-        m_object->sendFailed(HYPRPAPER_CORE_APPLYING_ERROR_INVALID_PATH);
+        m_object->sendFailed(ABYSSPAPER_CORE_APPLYING_ERROR_INVALID_PATH);
         return;
     }
 
     std::error_code ec;
     if (!std::filesystem::exists(m_path, ec) || ec) {
-        m_object->sendFailed(HYPRPAPER_CORE_APPLYING_ERROR_INVALID_PATH);
+        m_object->sendFailed(ABYSSPAPER_CORE_APPLYING_ERROR_INVALID_PATH);
         return;
     }
 
@@ -98,43 +98,43 @@ CSocket::CSocket() {
     if (!RTDIR)
         return;
 
-    const auto HIS = getenv("HYPRLAND_INSTANCE_SIGNATURE");
+    const auto HIS = getenv("ABYSSLAND_INSTANCE_SIGNATURE");
 
     if (!HIS) {
-        g_logger->log(LOG_WARN, "not running under hyprland, IPC will be disabled.");
+        g_logger->log(LOG_WARN, "not running under abyssland, IPC will be disabled.");
         return;
     }
 
-    m_socketPath = RTDIR + "/hypr/"s + HIS + "/"s + SOCKET_NAME;
+    m_socketPath = RTDIR + "/abyss/"s + HIS + "/"s + SOCKET_NAME;
 
     std::error_code ec;
     std::filesystem::remove(m_socketPath, ec);
 
-    m_socket = Hyprwire::IServerSocket::open(m_socketPath);
+    m_socket = Abysswire::IServerSocket::open(m_socketPath);
 
     if (!m_socket)
         return;
 
-    g_coreImpl = makeShared<CHyprpaperCoreImpl>(HP_PROTO_VERSION, [this](SP<Hyprwire::IObject> obj) {
-        auto manager = m_managers.emplace_back(makeShared<CHyprpaperCoreManagerObject>(std::move(obj)));
+    g_coreImpl = makeShared<CAbysspaperCoreImpl>(HP_PROTO_VERSION, [this](SP<Abysswire::IObject> obj) {
+        auto manager = m_managers.emplace_back(makeShared<CAbysspaperCoreManagerObject>(std::move(obj)));
 
-        manager->setDestroy([this, weak = WP<CHyprpaperCoreManagerObject>{manager}] { std::erase(m_managers, weak); });
-        manager->setOnDestroy([this, weak = WP<CHyprpaperCoreManagerObject>{manager}] { std::erase(m_managers, weak); });
+        manager->setDestroy([this, weak = WP<CAbysspaperCoreManagerObject>{manager}] { std::erase(m_managers, weak); });
+        manager->setOnDestroy([this, weak = WP<CAbysspaperCoreManagerObject>{manager}] { std::erase(m_managers, weak); });
 
-        manager->setGetWallpaperObject([this, weak = WP<CHyprpaperCoreManagerObject>{manager}](uint32_t id) {
+        manager->setGetWallpaperObject([this, weak = WP<CAbysspaperCoreManagerObject>{manager}](uint32_t id) {
             if (!weak)
                 return;
 
             m_wallpaperObjects.emplace_back(makeShared<CWallpaperObject>(
-                makeShared<CHyprpaperWallpaperObject>(m_socket->createObject(weak->getObject()->client(), weak->getObject(), "hyprpaper_wallpaper", id))));
+                makeShared<CAbysspaperWallpaperObject>(m_socket->createObject(weak->getObject()->client(), weak->getObject(), "abysspaper_wallpaper", id))));
         });
 
-        manager->setGetStatusObject([this, weak = WP<CHyprpaperCoreManagerObject>{manager}](uint32_t id) {
+        manager->setGetStatusObject([this, weak = WP<CAbysspaperCoreManagerObject>{manager}](uint32_t id) {
             if (!weak)
                 return;
 
             auto x =
-                m_statusObjects.emplace_back(makeShared<CHyprpaperStatusObject>(m_socket->createObject(weak->getObject()->client(), weak->getObject(), "hyprpaper_status", id)));
+                m_statusObjects.emplace_back(makeShared<CAbysspaperStatusObject>(m_socket->createObject(weak->getObject()->client(), weak->getObject(), "abysspaper_status", id)));
 
             for (const auto& m : g_ui->targets()) {
                 x->sendActiveWallpaper(m->m_monitorName.c_str(), m->m_lastPath.c_str());

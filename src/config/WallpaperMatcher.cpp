@@ -6,7 +6,7 @@ using namespace std::string_literals;
 
 // Check if a monitor string represents a wildcard (matches all monitors)
 // Empty string or "*" are both treated as wildcards.
-// "*" is preferred since hyprlang's special category system doesn't properly
+// "*" is preferred since abyssparse's special category system doesn't properly
 // return entries with empty string keys from listKeysForSpecialCategory().
 static bool isWildcard(const std::string& monitor) {
     return monitor.empty() || monitor == "*";

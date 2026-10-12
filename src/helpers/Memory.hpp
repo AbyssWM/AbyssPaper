@@ -1,10 +1,10 @@
 #pragma once
 
-#include <hyprutils/memory/SharedPtr.hpp>
-#include <hyprutils/memory/UniquePtr.hpp>
-#include <hyprutils/memory/Atomic.hpp>
+#include <abyssutils/memory/SharedPtr.hpp>
+#include <abyssutils/memory/UniquePtr.hpp>
+#include <abyssutils/memory/Atomic.hpp>
 
-using namespace Hyprutils::Memory;
+using namespace Abyssutils::Memory;
 
 #define SP  CSharedPointer
 #define WP  CWeakPointer

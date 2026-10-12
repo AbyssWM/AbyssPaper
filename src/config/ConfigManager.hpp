@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../helpers/Memory.hpp"
-#include <hyprlang.hpp>
+#include <abyssparse.hpp>
 #include <vector>
 
 class CConfigManager {
@@ -24,14 +24,14 @@ class CConfigManager {
     constexpr static const uint32_t SETTING_INVALID = 0;
 
     bool                            init();
-    Hyprlang::CConfig*              hyprlang();
+    Abyssparse::CConfig*              abyssparse();
 
     std::vector<SSetting>           getSettings();
 
     const std::string&              getCurrentConfigPath() const;
 
   private:
-    Hyprlang::CConfig m_config;
+    Abyssparse::CConfig m_config;
 
     std::string       m_currentConfigPath;
 };

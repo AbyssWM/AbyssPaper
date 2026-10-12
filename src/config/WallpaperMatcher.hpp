@@ -5,7 +5,7 @@
 
 #include "ConfigManager.hpp"
 
-#include <hyprutils/signal/Signal.hpp>
+#include <abyssutils/signal/Signal.hpp>
 
 class CWallpaperMatcher {
   public:
@@ -29,7 +29,7 @@ class CWallpaperMatcher {
     std::optional<rw<const CConfigManager::SSetting>> getSetting(const std::string_view& monName, const std::string_view& monDesc);
 
     struct {
-        Hyprutils::Signal::CSignalT<const std::string_view&> monitorConfigChanged;
+        Abyssutils::Signal::CSignalT<const std::string_view&> monitorConfigChanged;
     } m_events;
 
   private:

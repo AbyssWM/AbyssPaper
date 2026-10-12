@@ -1,4 +1,4 @@
-#include "HyprlandSocket.hpp"
+#include "AbysslandSocket.hpp"
 
 #include <pwd.h>
 #include <sys/socket.h>
@@ -9,9 +9,9 @@
 
 #include <format>
 
-#include <hyprutils/memory/Casts.hpp>
+#include <abyssutils/memory/Casts.hpp>
 
-using namespace Hyprutils::Memory;
+using namespace Abyssutils::Memory;
 
 static int getUID() {
     const auto UID   = getuid();
@@ -24,17 +24,17 @@ static std::string getRuntimeDir() {
 
     if (!XDG) {
         const std::string USERID = std::to_string(getUID());
-        return "/run/user/" + USERID + "/hypr";
+        return "/run/user/" + USERID + "/abyss";
     }
 
-    return std::string{XDG} + "/hypr";
+    return std::string{XDG} + "/abyss";
 }
 
-std::expected<std::string, std::string> HyprlandSocket::getFromSocket(const std::string& cmd) {
-    static const auto HIS = getenv("HYPRLAND_INSTANCE_SIGNATURE");
+std::expected<std::string, std::string> AbysslandSocket::getFromSocket(const std::string& cmd) {
+    static const auto HIS = getenv("ABYSSLAND_INSTANCE_SIGNATURE");
 
     if (!HIS || HIS[0] == '\0')
-        return std::unexpected("HYPRLAND_INSTANCE_SIGNATURE empty: are we under hyprland?");
+        return std::unexpected("ABYSSLAND_INSTANCE_SIGNATURE empty: are we under abyssland?");
 
     const auto SERVERSOCKET = socket(AF_UNIX, SOCK_STREAM, 0);
 
@@ -52,7 +52,7 @@ std::expected<std::string, std::string> HyprlandSocket::getFromSocket(const std:
     strncpy(serverAddress.sun_path, socketPath.c_str(), sizeof(serverAddress.sun_path) - 1);
 
     if (connect(SERVERSOCKET, rc<sockaddr*>(&serverAddress), SUN_LEN(&serverAddress)) < 0)
-        return std::unexpected(std::format("couldn't connect to the hyprland socket at {}", socketPath));
+        return std::unexpected(std::format("couldn't connect to the abyssland socket at {}", socketPath));
 
     auto sizeWritten = write(SERVERSOCKET, cmd.c_str(), cmd.length());
 
@@ -66,7 +66,7 @@ std::expected<std::string, std::string> HyprlandSocket::getFromSocket(const std:
 
     if (sizeWritten < 0) {
         if (errno == EWOULDBLOCK)
-            return std::unexpected("Hyprland IPC didn't respond in time");
+            return std::unexpected("Abyssland IPC didn't respond in time");
         return std::unexpected("couldn't read (5)");
     }
 

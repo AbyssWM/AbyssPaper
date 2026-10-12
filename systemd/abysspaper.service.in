@@ -1,6 +1,6 @@
 [Unit]
-Description=Fast, IPC-controlled wallpaper utility for Hyprland.
-Documentation=https://wiki.hyprland.org/Hypr-Ecosystem/hyprpaper/
+Description=Fast, IPC-controlled wallpaper utility for Abyssland.
+Documentation=https://wiki.abyssland.org/Abyss-Ecosystem/abysspaper/
 PartOf=graphical-session.target
 Requires=graphical-session.target
 After=graphical-session.target
@@ -8,7 +8,7 @@ ConditionEnvironment=WAYLAND_DISPLAY
 
 [Service]
 Type=simple
-ExecStart=@CMAKE_INSTALL_PREFIX@/bin/hyprpaper
+ExecStart=@CMAKE_INSTALL_PREFIX@/bin/abysspaper
 Slice=session.slice
 Restart=on-failure
 

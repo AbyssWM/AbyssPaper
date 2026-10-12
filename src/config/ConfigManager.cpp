@@ -3,10 +3,10 @@
 #include <filesystem>
 #include <glob.h>
 #include <random>
-#include <hyprlang.hpp>
-#include <hyprutils/path/Path.hpp>
-#include <hyprutils/string/String.hpp>
-#include <hyprutils/utils/ScopeGuard.hpp>
+#include <abyssparse.hpp>
+#include <abyssutils/path/Path.hpp>
+#include <abyssutils/string/String.hpp>
+#include <abyssutils/utils/ScopeGuard.hpp>
 #include <string>
 #include "../helpers/Logger.hpp"
 #include "WallpaperMatcher.hpp"
@@ -27,7 +27,7 @@ using namespace std::string_literals;
     if (magic == nullptr)
         return false;
 
-    Hyprutils::Utils::CScopeGuard guard{[&magic] { magic_close(magic); }};
+    Abyssutils::Utils::CScopeGuard guard{[&magic] { magic_close(magic); }};
 
     if (magic_load(magic, nullptr) != 0)
         return false;
@@ -40,34 +40,34 @@ using namespace std::string_literals;
 }
 
 // Forward declaration for the source handler
-static Hyprlang::CParseResult handleSource(const char* COMMAND, const char* VALUE);
+static Abyssparse::CParseResult handleSource(const char* COMMAND, const char* VALUE);
 
 static std::string            getMainConfigPath() {
-    static const auto paths = Hyprutils::Path::findConfig("hyprpaper");
+    static const auto paths = Abyssutils::Path::findConfig("abysspaper");
 
     return paths.first.value_or("");
 }
 
 CConfigManager::CConfigManager(const std::string& configPath) :
-    m_config(configPath.empty() ? getMainConfigPath().c_str() : configPath.c_str(), Hyprlang::SConfigOptions{.throwAllErrors = true, .allowMissingConfig = true}) {
+    m_config(configPath.empty() ? getMainConfigPath().c_str() : configPath.c_str(), Abyssparse::SConfigOptions{.throwAllErrors = true, .allowMissingConfig = true}) {
     m_currentConfigPath = configPath.empty() ? getMainConfigPath() : configPath;
 }
 
 bool CConfigManager::init() {
-    m_config.addConfigValue("splash", Hyprlang::INT{1});
-    m_config.addConfigValue("splash_offset", Hyprlang::INT{20});
-    m_config.addConfigValue("splash_opacity", Hyprlang::FLOAT{0.8});
-    m_config.addConfigValue("ipc", Hyprlang::INT{1});
+    m_config.addConfigValue("splash", Abyssparse::INT{1});
+    m_config.addConfigValue("splash_offset", Abyssparse::INT{20});
+    m_config.addConfigValue("splash_opacity", Abyssparse::FLOAT{0.8});
+    m_config.addConfigValue("ipc", Abyssparse::INT{1});
 
-    m_config.addSpecialCategory("wallpaper", Hyprlang::SSpecialCategoryOptions{.key = "monitor"});
-    m_config.addSpecialConfigValue("wallpaper", "monitor", Hyprlang::STRING{""});
-    m_config.addSpecialConfigValue("wallpaper", "path", Hyprlang::STRING{""});
-    m_config.addSpecialConfigValue("wallpaper", "fit_mode", Hyprlang::STRING{"cover"});
-    m_config.addSpecialConfigValue("wallpaper", "timeout", Hyprlang::INT{0});
-    m_config.addSpecialConfigValue("wallpaper", "order", Hyprlang::STRING{"default"});
-    m_config.addSpecialConfigValue("wallpaper", "recursive", Hyprlang::INT{0});
+    m_config.addSpecialCategory("wallpaper", Abyssparse::SSpecialCategoryOptions{.key = "monitor"});
+    m_config.addSpecialConfigValue("wallpaper", "monitor", Abyssparse::STRING{""});
+    m_config.addSpecialConfigValue("wallpaper", "path", Abyssparse::STRING{""});
+    m_config.addSpecialConfigValue("wallpaper", "fit_mode", Abyssparse::STRING{"cover"});
+    m_config.addSpecialConfigValue("wallpaper", "timeout", Abyssparse::INT{0});
+    m_config.addSpecialConfigValue("wallpaper", "order", Abyssparse::STRING{"default"});
+    m_config.addSpecialConfigValue("wallpaper", "recursive", Abyssparse::INT{0});
 
-    m_config.registerHandler(&handleSource, "source", Hyprlang::SHandlerOptions{});
+    m_config.registerHandler(&handleSource, "source", Abyssparse::SHandlerOptions{});
 
     m_config.commence();
 
@@ -82,7 +82,7 @@ bool CConfigManager::init() {
     return true;
 }
 
-Hyprlang::CConfig* CConfigManager::hyprlang() {
+Abyssparse::CConfig* CConfigManager::abyssparse() {
     return &m_config;
 }
 
@@ -177,12 +177,12 @@ std::vector<CConfigManager::SSetting> CConfigManager::getSettings() {
         int         timeout, recursive;
 
         try {
-            monitor = std::any_cast<Hyprlang::STRING>(m_config.getSpecialConfigValue("wallpaper", "monitor", key.c_str()));
-            fitMode = std::any_cast<Hyprlang::STRING>(m_config.getSpecialConfigValue("wallpaper", "fit_mode", key.c_str()));
-            path    = std::any_cast<Hyprlang::STRING>(m_config.getSpecialConfigValue("wallpaper", "path", key.c_str()));
-            timeout = std::any_cast<Hyprlang::INT>(m_config.getSpecialConfigValue("wallpaper", "timeout", key.c_str()));
-            order     = std::any_cast<Hyprlang::STRING>(m_config.getSpecialConfigValue("wallpaper", "order", key.c_str()));
-            recursive = std::any_cast<Hyprlang::INT>(m_config.getSpecialConfigValue("wallpaper", "recursive", key.c_str()));
+            monitor = std::any_cast<Abyssparse::STRING>(m_config.getSpecialConfigValue("wallpaper", "monitor", key.c_str()));
+            fitMode = std::any_cast<Abyssparse::STRING>(m_config.getSpecialConfigValue("wallpaper", "fit_mode", key.c_str()));
+            path    = std::any_cast<Abyssparse::STRING>(m_config.getSpecialConfigValue("wallpaper", "path", key.c_str()));
+            timeout = std::any_cast<Abyssparse::INT>(m_config.getSpecialConfigValue("wallpaper", "timeout", key.c_str()));
+            order     = std::any_cast<Abyssparse::STRING>(m_config.getSpecialConfigValue("wallpaper", "order", key.c_str()));
+            recursive = std::any_cast<Abyssparse::INT>(m_config.getSpecialConfigValue("wallpaper", "recursive", key.c_str()));
         } catch (...) {
             g_logger->log(LOG_ERR, "Failed parsing wallpaper for key {}", key);
             continue;
@@ -221,10 +221,10 @@ std::vector<CConfigManager::SSetting> CConfigManager::getSettings() {
     return result;
 }
 
-static Hyprlang::CParseResult handleSource(const char* COMMAND, const char* VALUE) {
-    Hyprlang::CParseResult result;
+static Abyssparse::CParseResult handleSource(const char* COMMAND, const char* VALUE) {
+    Abyssparse::CParseResult result;
 
-    const auto             value = Hyprutils::String::trim(VALUE);
+    const auto             value = Abyssutils::String::trim(VALUE);
 
     if (value.empty()) {
         result.setError("source= requires a file path");
@@ -244,7 +244,7 @@ static Hyprlang::CParseResult handleSource(const char* COMMAND, const char* VALU
 
     // Support glob patterns
     glob_t                        globResult;
-    Hyprutils::Utils::CScopeGuard scopeGuard([&globResult]() { globfree(&globResult); });
+    Abyssutils::Utils::CScopeGuard scopeGuard([&globResult]() { globfree(&globResult); });
 
     int                           globStatus = glob(PATH.c_str(), GLOB_TILDE | GLOB_NOSORT, nullptr, &globResult);
 
@@ -259,7 +259,7 @@ static Hyprlang::CParseResult handleSource(const char* COMMAND, const char* VALU
 
         // Parse the single file
         g_logger->log(LOG_DEBUG, "source: parsing file '{}'", PATH);
-        auto parseResult = g_config->hyprlang()->parseFile(PATH.c_str());
+        auto parseResult = g_config->abyssparse()->parseFile(PATH.c_str());
         if (parseResult.error)
             result.setError(std::format("error parsing '{}': {}", PATH, parseResult.getError()).c_str());
         return result;
@@ -283,7 +283,7 @@ static Hyprlang::CParseResult handleSource(const char* COMMAND, const char* VALU
         }
 
         g_logger->log(LOG_DEBUG, "source: parsing file '{}'", matchedPath);
-        auto parseResult = g_config->hyprlang()->parseFile(matchedPath.c_str());
+        auto parseResult = g_config->abyssparse()->parseFile(matchedPath.c_str());
         if (parseResult.error)
             g_logger->log(LOG_ERR, "error parsing '{}': {}", matchedPath, parseResult.getError());
     }

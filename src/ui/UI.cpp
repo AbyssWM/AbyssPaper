@@ -2,15 +2,15 @@
 #include "../defines.hpp"
 #include "../helpers/Logger.hpp"
 #include "../helpers/GlobalState.hpp"
-#include "../ipc/HyprlandSocket.hpp"
+#include "../ipc/AbysslandSocket.hpp"
 #include "../ipc/IPC.hpp"
 #include "../config/WallpaperMatcher.hpp"
 
 #include <algorithm>
 #include <random>
-#include <hyprtoolkit/core/Output.hpp>
+#include <abysstoolkit/core/Output.hpp>
 
-#include <hyprutils/string/String.hpp>
+#include <abyssutils/string/String.hpp>
 
 CUI::CUI() = default;
 
@@ -20,16 +20,16 @@ CUI::~CUI() {
 
 static std::string_view pruneDesc(const std::string_view& sv) {
     if (sv.contains('('))
-        return Hyprutils::String::trim(sv.substr(0, sv.find_last_of('(')));
+        return Abyssutils::String::trim(sv.substr(0, sv.find_last_of('(')));
     return sv;
 }
 
 class CWallpaperTarget::CImagesData {
   public:
-    CImagesData(Hyprtoolkit::eImageFitMode fitMode, std::vector<std::string> images, const int timeout = 0, std::string order = "default") :
+    CImagesData(Abysstoolkit::eImageFitMode fitMode, std::vector<std::string> images, const int timeout = 0, std::string order = "default") :
         fitMode(fitMode), images(std::move(images)), order(std::move(order)), timeout(timeout > 0 ? timeout : 30) {}
 
-    const Hyprtoolkit::eImageFitMode fitMode;
+    const Abysstoolkit::eImageFitMode fitMode;
     std::vector<std::string>         images;
     const std::string                order;
     const int                        timeout;
@@ -51,48 +51,48 @@ class CWallpaperTarget::CImagesData {
     size_t current = 0;
 };
 
-CWallpaperTarget::CWallpaperTarget(SP<Hyprtoolkit::IBackend> backend, SP<Hyprtoolkit::IOutput> output, const std::vector<std::string>& path, Hyprtoolkit::eImageFitMode fitMode,
+CWallpaperTarget::CWallpaperTarget(SP<Abysstoolkit::IBackend> backend, SP<Abysstoolkit::IOutput> output, const std::vector<std::string>& path, Abysstoolkit::eImageFitMode fitMode,
                                    const int timeout, const std::string& order) : m_monitorName(output->port()), m_backend(backend) {
-    static const auto SPLASH_REPLY = HyprlandSocket::getFromSocket("/splash");
+    static const auto SPLASH_REPLY = AbysslandSocket::getFromSocket("/splash");
 
-    static const auto PENABLESPLASH = Hyprlang::CSimpleConfigValue<Hyprlang::INT>(g_config->hyprlang(), "splash");
-    static const auto PSPLASHOFFSET = Hyprlang::CSimpleConfigValue<Hyprlang::INT>(g_config->hyprlang(), "splash_offset");
-    static const auto PSPLASHALPHA  = Hyprlang::CSimpleConfigValue<Hyprlang::FLOAT>(g_config->hyprlang(), "splash_opacity");
+    static const auto PENABLESPLASH = Abyssparse::CSimpleConfigValue<Abyssparse::INT>(g_config->abyssparse(), "splash");
+    static const auto PSPLASHOFFSET = Abyssparse::CSimpleConfigValue<Abyssparse::INT>(g_config->abyssparse(), "splash_offset");
+    static const auto PSPLASHALPHA  = Abyssparse::CSimpleConfigValue<Abyssparse::FLOAT>(g_config->abyssparse(), "splash_opacity");
 
     ASSERT(path.size() > 0);
 
-    m_window = Hyprtoolkit::CWindowBuilder::begin()
-                   ->type(Hyprtoolkit::HT_WINDOW_LAYER)
+    m_window = Abysstoolkit::CWindowBuilder::begin()
+                   ->type(Abysstoolkit::HT_WINDOW_LAYER)
                    ->prefferedOutput(output)
                    ->anchor(0xF)
                    ->layer(0)
                    ->preferredSize({0, 0})
                    ->exclusiveZone(-1)
-                   ->appClass("hyprpaper")
+                   ->appClass("abysspaper")
                    ->commence();
 
-    m_bg = Hyprtoolkit::CRectangleBuilder::begin()
-               ->size({Hyprtoolkit::CDynamicSize::HT_SIZE_PERCENT, Hyprtoolkit::CDynamicSize::HT_SIZE_PERCENT, {1, 1}})
-               ->color([] { return Hyprtoolkit::CHyprColor{0xFF000000}; })
+    m_bg = Abysstoolkit::CRectangleBuilder::begin()
+               ->size({Abysstoolkit::CDynamicSize::HT_SIZE_PERCENT, Abysstoolkit::CDynamicSize::HT_SIZE_PERCENT, {1, 1}})
+               ->color([] { return Abysstoolkit::CAbyssColor{0xFF000000}; })
                ->commence();
-    m_null = Hyprtoolkit::CNullBuilder::begin()->size({Hyprtoolkit::CDynamicSize::HT_SIZE_PERCENT, Hyprtoolkit::CDynamicSize::HT_SIZE_PERCENT, {1, 1}})->commence();
+    m_null = Abysstoolkit::CNullBuilder::begin()->size({Abysstoolkit::CDynamicSize::HT_SIZE_PERCENT, Abysstoolkit::CDynamicSize::HT_SIZE_PERCENT, {1, 1}})->commence();
 
-    m_image = Hyprtoolkit::CImageBuilder::begin()
+    m_image = Abysstoolkit::CImageBuilder::begin()
                   ->path(std::string{path.front()})
-                  ->size({Hyprtoolkit::CDynamicSize::HT_SIZE_PERCENT, Hyprtoolkit::CDynamicSize::HT_SIZE_PERCENT, {1.F, 1.F}})
+                  ->size({Abysstoolkit::CDynamicSize::HT_SIZE_PERCENT, Abysstoolkit::CDynamicSize::HT_SIZE_PERCENT, {1.F, 1.F}})
                   ->sync(true)
                   ->fitMode(fitMode)
                   ->commence();
 
     m_lastPath = path.front();
 
-    m_image->setPositionMode(Hyprtoolkit::IElement::HT_POSITION_ABSOLUTE);
-    m_image->setPositionFlag(Hyprtoolkit::IElement::HT_POSITION_FLAG_CENTER, true);
+    m_image->setPositionMode(Abysstoolkit::IElement::HT_POSITION_ABSOLUTE);
+    m_image->setPositionFlag(Abysstoolkit::IElement::HT_POSITION_FLAG_CENTER, true);
 
     if (path.size() > 1) {
         m_imagesData = makeUnique<CImagesData>(fitMode, std::vector<std::string>(path), timeout, order);
         m_timer =
-            m_backend->addTimer(std::chrono::milliseconds(std::chrono::seconds(m_imagesData->timeout)), [this](ASP<Hyprtoolkit::CTimer> self, void*) { onRepeatTimer(); }, nullptr);
+            m_backend->addTimer(std::chrono::milliseconds(std::chrono::seconds(m_imagesData->timeout)), [this](ASP<Abysstoolkit::CTimer> self, void*) { onRepeatTimer(); }, nullptr);
     }
 
     m_window->m_rootElement->addChild(m_bg);
@@ -103,15 +103,15 @@ CWallpaperTarget::CWallpaperTarget(SP<Hyprtoolkit::IBackend> backend, SP<Hyprtoo
         g_logger->log(LOG_ERR, "Can't get splash: {}", SPLASH_REPLY.error());
 
     if (SPLASH_REPLY && *PENABLESPLASH) {
-        m_splash = Hyprtoolkit::CTextBuilder::begin()
+        m_splash = Abysstoolkit::CTextBuilder::begin()
                        ->text(std::string{SPLASH_REPLY.value()})
-                       ->fontSize({Hyprtoolkit::CFontSize::HT_FONT_TEXT, 1.15F})
+                       ->fontSize({Abysstoolkit::CFontSize::HT_FONT_TEXT, 1.15F})
                        ->color([] { return g_ui->backend()->getPalette()->m_colors.text; })
                        ->a(*PSPLASHALPHA)
                        ->commence();
-        m_splash->setPositionMode(Hyprtoolkit::IElement::HT_POSITION_ABSOLUTE);
-        m_splash->setPositionFlag(Hyprtoolkit::IElement::HT_POSITION_FLAG_HCENTER, true);
-        m_splash->setPositionFlag(Hyprtoolkit::IElement::HT_POSITION_FLAG_BOTTOM, true);
+        m_splash->setPositionMode(Abysstoolkit::IElement::HT_POSITION_ABSOLUTE);
+        m_splash->setPositionFlag(Abysstoolkit::IElement::HT_POSITION_FLAG_HCENTER, true);
+        m_splash->setPositionFlag(Abysstoolkit::IElement::HT_POSITION_FLAG_BOTTOM, true);
         m_splash->setAbsolutePosition({0.F, sc<float>(-*PSPLASHOFFSET)});
         m_null->addChild(m_splash);
     }
@@ -132,22 +132,22 @@ void CWallpaperTarget::onRepeatTimer() {
 
     m_image->rebuild()
         ->path(std::string{m_lastPath})
-        ->size({Hyprtoolkit::CDynamicSize::HT_SIZE_PERCENT, Hyprtoolkit::CDynamicSize::HT_SIZE_PERCENT, {1.F, 1.F}})
+        ->size({Abysstoolkit::CDynamicSize::HT_SIZE_PERCENT, Abysstoolkit::CDynamicSize::HT_SIZE_PERCENT, {1.F, 1.F}})
         ->sync(true)
         ->fitMode(m_imagesData->fitMode)
         ->commence();
 
     m_timer =
-        m_backend->addTimer(std::chrono::milliseconds(std::chrono::seconds(m_imagesData->timeout)), [this](ASP<Hyprtoolkit::CTimer> self, void*) { onRepeatTimer(); }, nullptr);
+        m_backend->addTimer(std::chrono::milliseconds(std::chrono::seconds(m_imagesData->timeout)), [this](ASP<Abysstoolkit::CTimer> self, void*) { onRepeatTimer(); }, nullptr);
 
     IPC::g_IPCSocket->onWallpaperChanged(m_monitorName, m_lastPath);
 }
 
-void CUI::registerOutput(const SP<Hyprtoolkit::IOutput>& mon) {
+void CUI::registerOutput(const SP<Abysstoolkit::IOutput>& mon) {
     g_matcher->registerOutput(mon->port(), pruneDesc(mon->desc()));
     if (IPC::g_IPCSocket)
         IPC::g_IPCSocket->onNewDisplay(mon->port());
-    mon->m_events.removed.listenStatic([this, m = WP<Hyprtoolkit::IOutput>{mon}] {
+    mon->m_events.removed.listenStatic([this, m = WP<Abysstoolkit::IOutput>{mon}] {
         g_matcher->unregisterOutput(m->port());
         if (IPC::g_IPCSocket)
             IPC::g_IPCSocket->onRemovedDisplay(m->port());
@@ -156,15 +156,15 @@ void CUI::registerOutput(const SP<Hyprtoolkit::IOutput>& mon) {
 }
 
 bool CUI::run() {
-    static const auto PENABLEIPC = Hyprlang::CSimpleConfigValue<Hyprlang::INT>(g_config->hyprlang(), "ipc");
+    static const auto PENABLEIPC = Abyssparse::CSimpleConfigValue<Abyssparse::INT>(g_config->abyssparse(), "ipc");
 
     //
-    Hyprtoolkit::IBackend::SBackendCreationData data;
-    data.pLogConnection = makeShared<Hyprutils::CLI::CLoggerConnection>(*g_logger);
-    data.pLogConnection->setName("hyprtoolkit");
+    Abysstoolkit::IBackend::SBackendCreationData data;
+    data.pLogConnection = makeShared<Abyssutils::CLI::CLoggerConnection>(*g_logger);
+    data.pLogConnection->setName("abysstoolkit");
     data.pLogConnection->setLogLevel(g_state->verbose ? LOG_TRACE : LOG_ERR);
 
-    m_backend = Hyprtoolkit::IBackend::createWithData(data);
+    m_backend = Abysstoolkit::IBackend::createWithData(data);
 
     if (!m_backend)
         return false;
@@ -178,7 +178,7 @@ bool CUI::run() {
         registerOutput(m);
     }
 
-    m_listeners.newMon = m_backend->m_events.outputAdded.listen([this](SP<Hyprtoolkit::IOutput> mon) { registerOutput(mon); });
+    m_listeners.newMon = m_backend->m_events.outputAdded.listen([this](SP<Abysstoolkit::IOutput> mon) { registerOutput(mon); });
 
     g_logger->log(LOG_DEBUG, "Found {} output(s)", MONITORS.size());
 
@@ -194,25 +194,25 @@ bool CUI::run() {
     return true;
 }
 
-SP<Hyprtoolkit::IBackend> CUI::backend() {
+SP<Abysstoolkit::IBackend> CUI::backend() {
     return m_backend;
 }
 
-static Hyprtoolkit::eImageFitMode toFitMode(const std::string_view& sv) {
+static Abysstoolkit::eImageFitMode toFitMode(const std::string_view& sv) {
     if (sv.starts_with("contain"))
-        return Hyprtoolkit::IMAGE_FIT_MODE_CONTAIN;
+        return Abysstoolkit::IMAGE_FIT_MODE_CONTAIN;
     if (sv.starts_with("cover"))
-        return Hyprtoolkit::IMAGE_FIT_MODE_COVER;
+        return Abysstoolkit::IMAGE_FIT_MODE_COVER;
     if (sv.starts_with("tile"))
-        return Hyprtoolkit::IMAGE_FIT_MODE_TILE;
+        return Abysstoolkit::IMAGE_FIT_MODE_TILE;
     if (sv.starts_with("fill"))
-        return Hyprtoolkit::IMAGE_FIT_MODE_STRETCH;
-    return Hyprtoolkit::IMAGE_FIT_MODE_COVER;
+        return Abysstoolkit::IMAGE_FIT_MODE_STRETCH;
+    return Abysstoolkit::IMAGE_FIT_MODE_COVER;
 }
 
 void CUI::targetChanged(const std::string_view& monName) {
     const auto               MONITORS = m_backend->getOutputs();
-    SP<Hyprtoolkit::IOutput> monitor;
+    SP<Abysstoolkit::IOutput> monitor;
 
     for (const auto& m : MONITORS) {
         if (m->port() != monName)
@@ -229,7 +229,7 @@ void CUI::targetChanged(const std::string_view& monName) {
     targetChanged(monitor);
 }
 
-void CUI::targetChanged(const SP<Hyprtoolkit::IOutput>& mon) {
+void CUI::targetChanged(const SP<Abysstoolkit::IOutput>& mon) {
     const auto TARGET = g_matcher->getSetting(mon->port(), pruneDesc(mon->desc()));
 
     if (!TARGET) {

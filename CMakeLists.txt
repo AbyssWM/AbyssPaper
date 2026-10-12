@@ -4,17 +4,17 @@ file(READ "${CMAKE_SOURCE_DIR}/VERSION" VER_RAW)
 string(STRIP ${VER_RAW} VERSION)
 
 project(
-  hyprpaper
+  abysspaper
   DESCRIPTION "A blazing fast wayland wallpaper utility"
   VERSION ${VERSION})
 
-add_compile_definitions(HYPRPAPER_VERSION="${VERSION}")
+add_compile_definitions(ABYSSPAPER_VERSION="${VERSION}")
 
 set(CMAKE_MESSAGE_LOG_LEVEL "STATUS")
 
-message(STATUS "Configuring hyprpaper!")
+message(STATUS "Configuring abysspaper!")
 
-configure_file(systemd/hyprpaper.service.in systemd/hyprpaper.service @ONLY)
+configure_file(systemd/abysspaper.service.in systemd/abysspaper.service @ONLY)
 
 # Get git info hash and branch
 execute_process(
@@ -49,23 +49,23 @@ add_compile_options(-Wall -Wextra -Wno-unused-parameter -Wno-unused-value
 
 find_package(Threads REQUIRED)
 find_package(PkgConfig REQUIRED)
-find_package(hyprwayland-scanner 0.4.0 REQUIRED)
+find_package(abyss-scanner 0.4.0 REQUIRED)
 
 pkg_check_modules(
   deps
   REQUIRED
   IMPORTED_TARGET
-  hyprlang>=0.6.0
-  hyprutils>=0.2.4
+  abyssparse>=0.6.0
+  abyssutils>=0.2.4
   wayland-client
-  hyprtoolkit>=0.4.1
-  hyprwire
+  abysstoolkit>=0.4.1
+  abysswire
   pixman-1
   libdrm)
 
 file(GLOB_RECURSE SRCFILES "src/*.cpp")
 
-add_executable(hyprpaper ${SRCFILES})
+add_executable(abysspaper ${SRCFILES})
 
 # Wayland
 
@@ -84,20 +84,20 @@ function(protocolnew protoPath protoName external)
   add_custom_command(
     OUTPUT ${CMAKE_SOURCE_DIR}/protocols/${protoName}.cpp
            ${CMAKE_SOURCE_DIR}/protocols/${protoName}.hpp
-    COMMAND hyprwayland-scanner --client ${path}/${protoName}.xml
+    COMMAND abyss-scanner --client ${path}/${protoName}.xml
             ${CMAKE_SOURCE_DIR}/protocols/
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-  target_sources(hyprpaper PRIVATE protocols/${protoName}.cpp
+  target_sources(abysspaper PRIVATE protocols/${protoName}.cpp
                                    protocols/${protoName}.hpp)
 endfunction()
 function(protocolWayland)
   add_custom_command(
     OUTPUT ${CMAKE_SOURCE_DIR}/protocols/wayland.cpp
            ${CMAKE_SOURCE_DIR}/protocols/wayland.hpp
-    COMMAND hyprwayland-scanner --wayland-enums --client
+    COMMAND abyss-scanner --wayland-enums --client
             ${WAYLAND_SCANNER_PKGDATA_DIR}/wayland.xml ${CMAKE_SOURCE_DIR}/protocols/
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-  target_sources(hyprpaper PRIVATE protocols/wayland.cpp protocols/wayland.hpp)
+  target_sources(abysspaper PRIVATE protocols/wayland.cpp protocols/wayland.hpp)
 endfunction()
 
 protocolwayland()
@@ -110,43 +110,43 @@ protocolnew("stable/xdg-shell" "xdg-shell" false)
 protocolnew("staging/cursor-shape" "cursor-shape-v1" false)
 protocolnew("stable/tablet" "tablet-v2" false)
 
-# Hyprwire
+# Abysswire
 
-function(hyprprotocolServer protoPath protoName)
+function(abyssprotocolServer protoPath protoName)
   set(path ${CMAKE_SOURCE_DIR}/${protoPath})
   add_custom_command(
     OUTPUT ${CMAKE_SOURCE_DIR}/hw-protocols/${protoName}-server.cpp
            ${CMAKE_SOURCE_DIR}/hw-protocols/${protoName}-server.hpp
-    COMMAND hyprwire-scanner ${path}/${protoName}.xml
+    COMMAND abysswire-scanner ${path}/${protoName}.xml
             ${CMAKE_SOURCE_DIR}/hw-protocols/
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-  target_sources(hyprpaper PRIVATE hw-protocols/${protoName}-server.cpp
+  target_sources(abysspaper PRIVATE hw-protocols/${protoName}-server.cpp
                                    hw-protocols/${protoName}-server.hpp
                                    )
 endfunction()
 
-hyprprotocolServer(hw-protocols hyprpaper_core)
+abyssprotocolServer(hw-protocols abysspaper_core)
 
 # 
 
 string(REPLACE "\"" " " GIT_COMMIT_MESSAGE_ESCAPED "${GIT_COMMIT_MESSAGE}")
-target_compile_definitions(hyprpaper
+target_compile_definitions(abysspaper
                            PRIVATE "-DGIT_COMMIT_HASH=\"${GIT_COMMIT_HASH}\"")
-target_compile_definitions(hyprpaper PRIVATE "-DGIT_BRANCH=\"${GIT_BRANCH}\"")
-target_compile_definitions(hyprpaper
+target_compile_definitions(abysspaper PRIVATE "-DGIT_BRANCH=\"${GIT_BRANCH}\"")
+target_compile_definitions(abysspaper
                            PRIVATE "-DGIT_COMMIT_MESSAGE=\"${GIT_COMMIT_MESSAGE_ESCAPED}\"")
-target_compile_definitions(hyprpaper PRIVATE "-DGIT_DIRTY=\"${GIT_DIRTY}\"")
+target_compile_definitions(abysspaper PRIVATE "-DGIT_DIRTY=\"${GIT_DIRTY}\"")
 
-target_link_libraries(hyprpaper rt)
+target_link_libraries(abysspaper rt)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 include(CPack)
 
-target_link_libraries(hyprpaper PkgConfig::deps)
+target_link_libraries(abysspaper PkgConfig::deps)
 
 target_link_libraries(
-  hyprpaper
+  abysspaper
   OpenGL
   GLESv2
   pthread
@@ -164,5 +164,5 @@ endif(CMAKE_BUILD_TYPE MATCHES Debug OR CMAKE_BUILD_TYPE MATCHES DEBUG)
 
 include(GNUInstallDirs)
 
-install(TARGETS hyprpaper)
-install(FILES ${CMAKE_BINARY_DIR}/systemd/hyprpaper.service DESTINATION "lib/systemd/user")
+install(TARGETS abysspaper)
+install(FILES ${CMAKE_BINARY_DIR}/systemd/abysspaper.service DESTINATION "lib/systemd/user")
