@@ -10,12 +10,13 @@
 #include <string>
 #include "../helpers/Logger.hpp"
 #include "WallpaperMatcher.hpp"
+#include "../helpers/MediaDetector.hpp"
 
 #include <magic.h>
 
 using namespace std::string_literals;
 
-[[nodiscard]] static bool isImage(const std::filesystem::path& path) {
+[[nodiscard]] static bool isMedia(const std::filesystem::path& path) {
     static constexpr std::array exts{".jpg", ".jpeg", ".png", ".bmp", ".webp", ".svg"};
 
     auto                        ext = path.extension().string();
@@ -36,11 +37,12 @@ using namespace std::string_literals;
     if (result == nullptr)
         return false;
 
-    return std::string(result).starts_with("image/");
+    return std::string(result).starts_with("image/") || MediaDetector::isVideo(path.string());
 }
 
 // Forward declaration for the source handler
 static Abyssparse::CParseResult handleSource(const char* COMMAND, const char* VALUE);
+static thread_local std::vector<std::string> activeConfigFiles;
 
 static std::string            getMainConfigPath() {
     static const auto paths = Abyssutils::Path::findConfig("abysspaper");
@@ -72,6 +74,9 @@ bool CConfigManager::init() {
 
     m_config.commence();
 
+    std::error_code ec;
+    activeConfigFiles.push_back(std::filesystem::weakly_canonical(m_currentConfigPath, ec).string());
+    Abyssutils::Utils::CScopeGuard sourceGuard{[] { activeConfigFiles.pop_back(); }};
     auto result = m_config.parse();
 
     if (result.error) {
@@ -101,7 +106,7 @@ static std::expected<std::string, std::string> resolvePath(const std::string_vie
     return CAN;
 }
 
-static std::expected<std::string, std::string> getPath(const std::string_view& sv, const std::string& basePath = "") {
+static std::expected<std::string, std::string> getPath(const std::string_view& sv, const std::string& basePath = "", bool canonical = true) {
     if (sv.empty())
         return std::unexpected("empty path");
 
@@ -119,7 +124,7 @@ static std::expected<std::string, std::string> getPath(const std::string_view& s
         path         = (baseDir / sv).string();
     }
 
-    return resolvePath(path);
+    return canonical ? resolvePath(path) : std::expected<std::string, std::string>{path};
 }
 
 static std::expected<std::vector<std::string>, std::string> getFullPath(const std::string& sv, const bool recursive) {
@@ -140,7 +145,7 @@ static std::expected<std::vector<std::string>, std::string> getFullPath(const st
 
     if (std::filesystem::is_directory(resolvedPath)) {
         auto processEntry = [&result](const auto& entry) {
-            if (entry.is_regular_file() && isImage(entry.path()))
+            if (entry.is_regular_file() && isMedia(entry.path()))
                 result.push_back(entry.path());
         };
 
@@ -159,10 +164,10 @@ static std::expected<std::vector<std::string>, std::string> getFullPath(const st
             }
         }
     }
-    else if (isImage(resolvedPath))
+    else if (isMedia(resolvedPath))
         result.push_back(resolvedPath);
     else
-        return std::unexpected(std::format("File '{}' is neither an image nor a directory", resolvedPath));
+        return std::unexpected(std::format("File '{}' is neither supported media nor a directory", resolvedPath));
 
     return result;
 }
@@ -198,7 +203,7 @@ std::vector<CConfigManager::SSetting> CConfigManager::getSettings() {
         }
 
         if (RESOLVE_PATH.value().empty()) {
-            g_logger->log(LOG_ERR, "Provided path(s) '{}' does not contain a valid image", path);
+            g_logger->log(LOG_ERR, "Provided path(s) '{}' does not contain supported media", path);
             continue;
         }
 
@@ -233,7 +238,7 @@ static Abyssparse::CParseResult handleSource(const char* COMMAND, const char* VA
         return result;
     }
 
-    const auto RESOLVED_PATH = getPath(value, g_config->getCurrentConfigPath());
+    const auto RESOLVED_PATH = getPath(value, activeConfigFiles.empty() ? g_config->getCurrentConfigPath() : activeConfigFiles.back(), false);
 
     if (!RESOLVED_PATH) {
         result.setError(std::format("source= path error: {}", RESOLVED_PATH.error()).c_str());
@@ -245,25 +250,13 @@ static Abyssparse::CParseResult handleSource(const char* COMMAND, const char* VA
     g_logger->log(LOG_DEBUG, "source: including '{}'", PATH);
 
     // Support glob patterns
-    glob_t                        globResult;
+    glob_t                        globResult{};
     Abyssutils::Utils::CScopeGuard scopeGuard([&globResult]() { globfree(&globResult); });
 
-    int                           globStatus = glob(PATH.c_str(), GLOB_TILDE | GLOB_NOSORT, nullptr, &globResult);
+    int                           globStatus = glob(PATH.c_str(), GLOB_TILDE, nullptr, &globResult);
 
     if (globStatus == GLOB_NOMATCH) {
-        // No glob match - try as a literal path
-        std::error_code ec;
-        const auto      exists = std::filesystem::exists(PATH, ec);
-        if (ec || !exists) {
-            result.setError(std::format("source file '{}' not found", PATH).c_str());
-            return result;
-        }
-
-        // Parse the single file
-        g_logger->log(LOG_DEBUG, "source: parsing file '{}'", PATH);
-        auto parseResult = g_config->abyssparse()->parseFile(PATH.c_str());
-        if (parseResult.error)
-            result.setError(std::format("error parsing '{}': {}", PATH, parseResult.getError()).c_str());
+        result.setError(std::format("source file '{}' not found", PATH).c_str());
         return result;
     }
 
@@ -284,10 +277,24 @@ static Abyssparse::CParseResult handleSource(const char* COMMAND, const char* VA
             continue;
         }
 
-        g_logger->log(LOG_DEBUG, "source: parsing file '{}'", matchedPath);
-        auto parseResult = g_config->abyssparse()->parseFile(matchedPath.c_str());
-        if (parseResult.error)
-            g_logger->log(LOG_ERR, "error parsing '{}': {}", matchedPath, parseResult.getError());
+        const auto canonicalPath = resolvePath(matchedPath);
+        if (!canonicalPath) {
+            result.setError(canonicalPath.error().c_str());
+            return result;
+        }
+        if (activeConfigFiles.size() >= 64 || std::ranges::find(activeConfigFiles, *canonicalPath) != activeConfigFiles.end()) {
+            result.setError(std::format("source cycle or include depth exceeded at '{}'", matchedPath).c_str());
+            return result;
+        }
+
+        activeConfigFiles.push_back(*canonicalPath);
+        Abyssutils::Utils::CScopeGuard sourceGuard{[] { activeConfigFiles.pop_back(); }};
+        g_logger->log(LOG_DEBUG, "source: parsing file '{}'", *canonicalPath);
+        auto parseResult = g_config->abyssparse()->parseFile(canonicalPath->c_str());
+        if (parseResult.error) {
+            result.setError(std::format("error parsing '{}': {}", matchedPath, parseResult.getError()).c_str());
+            return result;
+        }
     }
 
     return result;

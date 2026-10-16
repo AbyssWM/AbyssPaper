@@ -1,6 +1,6 @@
 # AbyssPaper Video/GIF Support
 
-AbyssPaper now supports video wallpapers (MP4, WebM, MKV, GIF, APNG) with hardware acceleration and optional audio.
+AbyssPaper contains an unfinished libmpv prototype for video wallpapers (MP4, WebM, MKV, GIF, APNG). Media detection and legacy config ingestion are tested, but rendered frames are not connected to the wallpaper window. Neither OpenGL presentation nor the software fallback is complete. Audio, hardware acceleration, zero-copy and the performance numbers below are unverified design targets. The examples describe intended configuration, not working playback support.
 
 ## Features
 

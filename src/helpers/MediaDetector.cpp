@@ -5,8 +5,45 @@
 #include <magic.h>
 #include <cstring>
 #include <algorithm>
+#include <array>
+#include <cctype>
+#include <cstdint>
+#include <fstream>
 
 namespace MediaDetector {
+
+namespace {
+// PNG stores animation control before IDAT; ordinary PNGs stay on the image path.
+bool isAnimatedPNG(const std::string_view path) {
+    std::ifstream file(std::string{path}, std::ios::binary);
+    std::array<unsigned char, 8> header;
+    constexpr std::array<unsigned char, 8> signature{137, 80, 78, 71, 13, 10, 26, 10};
+    if (!file.read(reinterpret_cast<char*>(header.data()), header.size()) || header != signature)
+        return false;
+
+    while (file.read(reinterpret_cast<char*>(header.data()), header.size())) {
+        const uint32_t length = (uint32_t{header[0]} << 24) | (uint32_t{header[1]} << 16) |
+                                (uint32_t{header[2]} << 8) | header[3];
+        if (std::memcmp(header.data() + 4, "acTL", 4) == 0)
+            return length == 8;
+        if (std::memcmp(header.data() + 4, "IDAT", 4) == 0 || std::memcmp(header.data() + 4, "IEND", 4) == 0)
+            return false;
+        file.seekg(static_cast<std::streamoff>(length) + 4, std::ios::cur); // payload + CRC
+    }
+    return false;
+}
+
+bool isAnimatedWebP(const std::string_view path) {
+    std::ifstream file(std::string{path}, std::ios::binary);
+    std::array<unsigned char, 21> header;
+    // An animated WebP requires the animation flag in its first VP8X chunk.
+    return file.read(reinterpret_cast<char*>(header.data()), header.size()) &&
+           std::memcmp(header.data(), "RIFF", 4) == 0 &&
+           std::memcmp(header.data() + 8, "WEBPVP8X", 8) == 0 &&
+           header[16] == 10 && header[17] == 0 && header[18] == 0 && header[19] == 0 &&
+           (header[20] & 0x02);
+}
+}
 
 eMediaType detectMediaType(const std::string_view& path) {
     magic_t magic = magic_open(MAGIC_MIME_TYPE);
@@ -35,11 +72,6 @@ eMediaType detectMediaType(const std::string_view& path) {
 
     // Check for video types
     if (mime.starts_with("video/")) {
-        // Check for GIF specifically
-        if (mime == "image/gif") {
-            // GIF can be static or animated, treat as GIF for mpv handling
-            return MEDIA_TYPE_GIF;
-        }
         return MEDIA_TYPE_VIDEO;
     }
 
@@ -49,15 +81,12 @@ eMediaType detectMediaType(const std::string_view& path) {
     }
     
     if (mime == "image/png" || mime == "image/apng") {
-        // APNG detection requires checking file contents
-        // For now, let mpv handle it if it's animated
-        return MEDIA_TYPE_APNG;
+        return isAnimatedPNG(path) ? MEDIA_TYPE_APNG : MEDIA_TYPE_IMAGE;
     }
 
     // Check for WebP (can be animated)
     if (mime == "image/webp") {
-        // WebP can be animated, treat as video candidate
-        return MEDIA_TYPE_VIDEO;
+        return isAnimatedWebP(path) ? MEDIA_TYPE_VIDEO : MEDIA_TYPE_IMAGE;
     }
 
     // Static images
@@ -67,7 +96,7 @@ eMediaType detectMediaType(const std::string_view& path) {
 
     // Additional video container checks by extension if MIME detection failed
     std::string pathStr(path);
-    std::transform(pathStr.begin(), pathStr.end(), pathStr.begin(), ::tolower);
+    std::transform(pathStr.begin(), pathStr.end(), pathStr.begin(), [](unsigned char c) { return std::tolower(c); });
     
     if (pathStr.ends_with(".mp4") || pathStr.ends_with(".mkv") || 
         pathStr.ends_with(".webm") || pathStr.ends_with(".avi") ||

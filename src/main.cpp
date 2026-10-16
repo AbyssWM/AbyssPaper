@@ -48,7 +48,5 @@ int main(int argc, const char** argv, const char** envp) {
         return 1;
 
     g_ui = makeUnique<CUI>();
-    g_ui->run();
-
-    return 0;
+    return g_ui->run() ? 0 : 1;
 }

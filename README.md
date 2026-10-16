@@ -23,9 +23,9 @@ AbyssPaper is a simple and fast wallpaper utility for [Abyssland](https://github
 - `cover`, `contain`, `tile` and `fill` modes
 - Fractional scaling support
 - IPC (`abysspaper_core`) for fast wallpaper switches
-- **🎬 Video wallpapers** (MP4, WebM, MKV, GIF, APNG) with hardware acceleration
-- **🔊 Optional audio** via PipeWire/PulseAudio (disabled by default)
-- **⚡ Zero-copy rendering** via EGL/GLES3 (OpenGL) with vaapi/nvdec fallback
+- Experimental media detection and libmpv prototype for MP4, WebM, MKV, GIF and APNG
+
+**Video playback is unfinished:** the libmpv renderer is not connected to a Wayland surface or toolkit image element. OpenGL presentation and the software fallback are incomplete; video/GIF wallpapers are not currently usable. Hardware acceleration, audio output and performance have not been validated. Static PNG and WebP images use the existing image renderer.
 
 Abyssland also ships built-in wallpapers (`misc:force_default_wallpaper`). AbyssPaper is meant for your own images and videos.
 
@@ -35,6 +35,8 @@ See [VIDEO_SUPPORT.md](VIDEO_SUPPORT.md) for video/GIF configuration and require
 
 `~/.config/abyss/abysspaper.conf`:
 
+Runtime settings currently use the legacy format below. The build-time `#include.abyss <paper>` prototype only reports compiled config names; it does not apply wallpaper, audio or volume settings.
+
 ```ini
 # Static image
 wallpaper {
@@ -43,7 +45,7 @@ wallpaper {
     fit_mode = cover
 }
 
-# Video wallpaper (NEW!)
+# Experimental video entry (renderer unfinished)
 wallpaper {
     monitor = DP-1
     path = ~/Videos/animated.mp4

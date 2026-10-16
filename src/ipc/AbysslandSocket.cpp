@@ -10,6 +10,7 @@
 #include <format>
 
 #include <abyssutils/memory/Casts.hpp>
+#include <abyssutils/utils/ScopeGuard.hpp>
 
 using namespace Abyssutils::Memory;
 
@@ -38,11 +39,12 @@ std::expected<std::string, std::string> AbysslandSocket::getFromSocket(const std
 
     const auto SERVERSOCKET = socket(AF_UNIX, SOCK_STREAM, 0);
 
-    auto       t = timeval{.tv_sec = 5, .tv_usec = 0};
-    setsockopt(SERVERSOCKET, SOL_SOCKET, SO_RCVTIMEO, &t, sizeof(struct timeval));
-
     if (SERVERSOCKET < 0)
         return std::unexpected("couldn't open a socket (1)");
+    Abyssutils::Utils::CScopeGuard socketGuard{[SERVERSOCKET] { close(SERVERSOCKET); }};
+
+    auto       t = timeval{.tv_sec = 5, .tv_usec = 0};
+    setsockopt(SERVERSOCKET, SOL_SOCKET, SO_RCVTIMEO, &t, sizeof(struct timeval));
 
     sockaddr_un serverAddress = {0};
     serverAddress.sun_family  = AF_UNIX;
@@ -79,8 +81,6 @@ std::expected<std::string, std::string> AbysslandSocket::getFromSocket(const std
         }
         reply += std::string(buffer, sizeWritten);
     }
-
-    close(SERVERSOCKET);
 
     return reply;
 }

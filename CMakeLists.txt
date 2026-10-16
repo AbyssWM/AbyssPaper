@@ -178,3 +178,19 @@ include(GNUInstallDirs)
 
 install(TARGETS abysspaper)
 install(FILES ${CMAKE_BINARY_DIR}/systemd/abysspaper.service DESTINATION "lib/systemd/user")
+
+include(CTest)
+if(BUILD_TESTING)
+  find_package(Python3 COMPONENTS Interpreter REQUIRED)
+  find_program(FFMPEG_EXECUTABLE ffmpeg)
+  if(FFMPEG_EXECUTABLE)
+    add_executable(media-config-tests tests/MediaConfig.cpp
+      src/helpers/MediaDetector.cpp src/config/ConfigManager.cpp
+      src/config/WallpaperMatcher.cpp src/ipc/AbysslandSocket.cpp)
+    target_link_libraries(media-config-tests PRIVATE PkgConfig::deps magic)
+    add_test(NAME media-config-regression
+      COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/media_config.py
+        $<TARGET_FILE:media-config-tests> ${FFMPEG_EXECUTABLE}
+        ${CMAKE_BINARY_DIR}/test-media)
+  endif()
+endif()

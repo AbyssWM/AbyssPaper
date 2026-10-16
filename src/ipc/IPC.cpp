@@ -53,7 +53,7 @@ static std::string fitModeToStr(abysspaperCoreWallpaperFitMode m) {
         case ABYSSPAPER_CORE_WALLPAPER_FIT_MODE_CONTAIN: return "contain";
         case ABYSSPAPER_CORE_WALLPAPER_FIT_MODE_COVER: return "cover";
         case ABYSSPAPER_CORE_WALLPAPER_FIT_MODE_TILE: return "tile";
-        case ABYSSPAPER_CORE_WALLPAPER_FIT_MODE_STRETCH: return "fit";
+        case ABYSSPAPER_CORE_WALLPAPER_FIT_MODE_STRETCH: return "fill";
         default: return "cover";
     }
 }
