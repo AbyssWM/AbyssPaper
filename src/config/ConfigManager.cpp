@@ -66,6 +66,7 @@ bool CConfigManager::init() {
     m_config.addSpecialConfigValue("wallpaper", "timeout", Abyssparse::INT{0});
     m_config.addSpecialConfigValue("wallpaper", "order", Abyssparse::STRING{"default"});
     m_config.addSpecialConfigValue("wallpaper", "recursive", Abyssparse::INT{0});
+    m_config.addSpecialConfigValue("wallpaper", "audio", Abyssparse::INT{0});
 
     m_config.registerHandler(&handleSource, "source", Abyssparse::SHandlerOptions{});
 
@@ -174,7 +175,7 @@ std::vector<CConfigManager::SSetting> CConfigManager::getSettings() {
 
     for (auto& key : keys) {
         std::string monitor, fitMode, path, order;
-        int         timeout, recursive;
+        int         timeout, recursive, audio;
 
         try {
             monitor = std::any_cast<Abyssparse::STRING>(m_config.getSpecialConfigValue("wallpaper", "monitor", key.c_str()));
@@ -183,6 +184,7 @@ std::vector<CConfigManager::SSetting> CConfigManager::getSettings() {
             timeout = std::any_cast<Abyssparse::INT>(m_config.getSpecialConfigValue("wallpaper", "timeout", key.c_str()));
             order     = std::any_cast<Abyssparse::STRING>(m_config.getSpecialConfigValue("wallpaper", "order", key.c_str()));
             recursive = std::any_cast<Abyssparse::INT>(m_config.getSpecialConfigValue("wallpaper", "recursive", key.c_str()));
+            audio = std::any_cast<Abyssparse::INT>(m_config.getSpecialConfigValue("wallpaper", "audio", key.c_str()));
         } catch (...) {
             g_logger->log(LOG_ERR, "Failed parsing wallpaper for key {}", key);
             continue;
@@ -215,7 +217,7 @@ std::vector<CConfigManager::SSetting> CConfigManager::getSettings() {
             }
         }
 
-        result.emplace_back(SSetting{.monitor = std::move(monitor), .fitMode = std::move(fitMode), .paths = std::move(resolvedPaths), .order = std::move(order), .timeout = timeout});
+        result.emplace_back(SSetting{.monitor = std::move(monitor), .fitMode = std::move(fitMode), .paths = std::move(resolvedPaths), .order = std::move(order), .timeout = timeout, .audio = audio != 0});
     }
 
     return result;

@@ -18,7 +18,7 @@
 class CWallpaperTarget {
   public:
     CWallpaperTarget(SP<Abysstoolkit::IBackend> backend, SP<Abysstoolkit::IOutput> output, const std::vector<std::string>& path,
-                     Abysstoolkit::eImageFitMode fitMode = Abysstoolkit::IMAGE_FIT_MODE_COVER, const int timeout = 0, const std::string& order = "default");
+                     Abysstoolkit::eImageFitMode fitMode = Abysstoolkit::IMAGE_FIT_MODE_COVER, const int timeout = 0, const std::string& order = "default", const bool audio = false);
     ~CWallpaperTarget();
 
     CWallpaperTarget(const CWallpaperTarget&) = delete;

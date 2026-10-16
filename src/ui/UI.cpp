@@ -53,7 +53,7 @@ class CWallpaperTarget::CImagesData {
 };
 
 CWallpaperTarget::CWallpaperTarget(SP<Abysstoolkit::IBackend> backend, SP<Abysstoolkit::IOutput> output, const std::vector<std::string>& path, Abysstoolkit::eImageFitMode fitMode,
-                                   const int timeout, const std::string& order) : m_monitorName(output->port()), m_backend(backend) {
+                                   const int timeout, const std::string& order, const bool audio) : m_monitorName(output->port()), m_backend(backend) {
     static const auto SPLASH_REPLY = AbysslandSocket::getFromSocket("/splash");
 
     static const auto PENABLESPLASH = Abyssparse::CSimpleConfigValue<Abyssparse::INT>(g_config->abyssparse(), "splash");
@@ -93,7 +93,7 @@ CWallpaperTarget::CWallpaperTarget(SP<Abysstoolkit::IBackend> backend, SP<Abysst
         CVideoElement::SCreateInfo videoInfo;
         videoInfo.path = path.front();
         videoInfo.fitMode = static_cast<CVideoElement::eFitMode>(fitMode);
-        videoInfo.audio = false; // Default: no audio
+        videoInfo.audio = audio; // From config
         videoInfo.loop = true;
         videoInfo.output = output;
         videoInfo.backend = backend;
@@ -346,7 +346,7 @@ void CUI::targetChanged(const SP<Abysstoolkit::IOutput>& mon) {
 
     std::erase_if(m_targets, [&mon](const auto& e) { return e->m_monitorName == mon->port(); });
 
-    m_targets.emplace_back(makeShared<CWallpaperTarget>(m_backend, mon, TARGET->get().paths, toFitMode(TARGET->get().fitMode), TARGET->get().timeout, TARGET->get().order));
+    m_targets.emplace_back(makeShared<CWallpaperTarget>(m_backend, mon, TARGET->get().paths, toFitMode(TARGET->get().fitMode), TARGET->get().timeout, TARGET->get().order, TARGET->get().audio));
 }
 
 const std::vector<SP<CWallpaperTarget>>& CUI::targets() {

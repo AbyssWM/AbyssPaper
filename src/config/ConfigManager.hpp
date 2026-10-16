@@ -18,6 +18,7 @@ class CConfigManager {
         std::vector<std::string> paths;
         std::string              order   = "default";
         int                      timeout = 0;
+        bool                     audio   = false;
         uint32_t                 id      = 0;
     };
 
