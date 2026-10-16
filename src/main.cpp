@@ -3,6 +3,7 @@
 #include "helpers/GlobalState.hpp"
 #include "ui/UI.hpp"
 #include "config/ConfigManager.hpp"
+#include "config/ConfigLoader.hpp"
 
 #include <abyssutils/cli/ArgumentParser.hpp>
 
@@ -38,6 +39,9 @@ int main(int argc, const char** argv, const char** envp) {
     }
 
     g_logger->log(LOG_DEBUG, "Welcome to abysspaper!\nbuilt from commit {} ({})", GIT_COMMIT_HASH, GIT_COMMIT_MESSAGE);
+
+    // Test new #include.abyss config system
+    abyss::paper::CConfigLoader::printConfigInfo();
 
     g_config = makeUnique<CConfigManager>(std::string{parser.getString("config").value_or("")});
     if (!g_config->init())

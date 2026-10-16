@@ -47,6 +47,9 @@ add_compile_options(-DWLR_USE_UNSTABLE)
 add_compile_options(-Wall -Wextra -Wno-unused-parameter -Wno-unused-value
                     -Wno-missing-field-initializers -Wno-narrowing)
 
+# Include abyss config system
+include(../Abysstoolkit/cmake/AbyssConfig.cmake)
+
 find_package(Threads REQUIRED)
 find_package(PkgConfig REQUIRED)
 find_package(abyss-scanner 0.4.0 REQUIRED)
@@ -70,6 +73,9 @@ pkg_check_modules(
 file(GLOB_RECURSE SRCFILES "src/*.cpp")
 
 add_executable(abysspaper ${SRCFILES})
+
+# Add config support for #include.abyss system
+abyss_add_config_support(abysspaper "paper")
 
 # Wayland
 
