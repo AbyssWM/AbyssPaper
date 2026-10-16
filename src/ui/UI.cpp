@@ -2,6 +2,7 @@
 #include "../defines.hpp"
 #include "../helpers/Logger.hpp"
 #include "../helpers/GlobalState.hpp"
+#include "../helpers/MediaDetector.hpp"
 #include "../ipc/AbysslandSocket.hpp"
 #include "../ipc/IPC.hpp"
 #include "../config/WallpaperMatcher.hpp"
@@ -61,6 +62,13 @@ CWallpaperTarget::CWallpaperTarget(SP<Abysstoolkit::IBackend> backend, SP<Abysst
 
     ASSERT(path.size() > 0);
 
+    // Detect if the first path is a video/GIF
+    m_isVideo = MediaDetector::isVideo(path.front());
+    m_lastPath = path.front();
+
+    g_logger->log(LOG_DEBUG, "Creating wallpaper target for {} on {}: type={}", 
+                  path.front(), output->port(), m_isVideo ? "video" : "image");
+
     m_window = Abysstoolkit::CWindowBuilder::begin()
                    ->type(Abysstoolkit::HT_WINDOW_LAYER)
                    ->prefferedOutput(output)
@@ -77,27 +85,53 @@ CWallpaperTarget::CWallpaperTarget(SP<Abysstoolkit::IBackend> backend, SP<Abysst
                ->commence();
     m_null = Abysstoolkit::CNullBuilder::begin()->size({Abysstoolkit::CDynamicSize::HT_SIZE_PERCENT, Abysstoolkit::CDynamicSize::HT_SIZE_PERCENT, {1, 1}})->commence();
 
-    m_image = Abysstoolkit::CImageBuilder::begin()
-                  ->path(std::string{path.front()})
-                  ->size({Abysstoolkit::CDynamicSize::HT_SIZE_PERCENT, Abysstoolkit::CDynamicSize::HT_SIZE_PERCENT, {1.F, 1.F}})
-                  ->sync(true)
-                  ->fitMode(fitMode)
-                  ->commence();
+    m_window->m_rootElement->addChild(m_bg);
+    m_window->m_rootElement->addChild(m_null);
 
-    m_lastPath = path.front();
+    if (m_isVideo) {
+        // Create video element
+        CVideoElement::SCreateInfo videoInfo;
+        videoInfo.path = path.front();
+        videoInfo.fitMode = static_cast<CVideoElement::eFitMode>(fitMode);
+        videoInfo.audio = false; // Default: no audio
+        videoInfo.loop = true;
+        videoInfo.output = output;
+        videoInfo.backend = backend;
+        videoInfo.updateCallback = [this]() {
+            // Request frame update
+            if (m_video)
+                m_video->render();
+        };
 
-    m_image->setPositionMode(Abysstoolkit::IElement::HT_POSITION_ABSOLUTE);
-    m_image->setPositionFlag(Abysstoolkit::IElement::HT_POSITION_FLAG_CENTER, true);
+        m_video = CVideoElement::create(videoInfo);
+        if (!m_video) {
+            g_logger->log(LOG_ERR, "Failed to create video element, falling back to image");
+            m_isVideo = false;
+        } else {
+            // Resize will be called after window is opened
+            g_logger->log(LOG_DEBUG, "Video wallpaper created for {}", output->port());
+        }
+    }
+
+    if (!m_isVideo) {
+        // Create image element
+        m_image = Abysstoolkit::CImageBuilder::begin()
+                      ->path(std::string{path.front()})
+                      ->size({Abysstoolkit::CDynamicSize::HT_SIZE_PERCENT, Abysstoolkit::CDynamicSize::HT_SIZE_PERCENT, {1.F, 1.F}})
+                      ->sync(true)
+                      ->fitMode(fitMode)
+                      ->commence();
+
+        m_image->setPositionMode(Abysstoolkit::IElement::HT_POSITION_ABSOLUTE);
+        m_image->setPositionFlag(Abysstoolkit::IElement::HT_POSITION_FLAG_CENTER, true);
+        m_null->addChild(m_image);
+    }
 
     if (path.size() > 1) {
         m_imagesData = makeUnique<CImagesData>(fitMode, std::vector<std::string>(path), timeout, order);
         m_timer =
             m_backend->addTimer(std::chrono::milliseconds(std::chrono::seconds(m_imagesData->timeout)), [this](ASP<Abysstoolkit::CTimer> self, void*) { onRepeatTimer(); }, nullptr);
     }
-
-    m_window->m_rootElement->addChild(m_bg);
-    m_window->m_rootElement->addChild(m_null);
-    m_null->addChild(m_image);
 
     if (!SPLASH_REPLY)
         g_logger->log(LOG_ERR, "Can't get splash: {}", SPLASH_REPLY.error());
@@ -130,12 +164,85 @@ void CWallpaperTarget::onRepeatTimer() {
 
     m_lastPath = m_imagesData->nextImage();
 
-    m_image->rebuild()
-        ->path(std::string{m_lastPath})
-        ->size({Abysstoolkit::CDynamicSize::HT_SIZE_PERCENT, Abysstoolkit::CDynamicSize::HT_SIZE_PERCENT, {1.F, 1.F}})
-        ->sync(true)
-        ->fitMode(m_imagesData->fitMode)
-        ->commence();
+    // Check if new path is video or image
+    bool newIsVideo = MediaDetector::isVideo(m_lastPath);
+
+    if (newIsVideo != m_isVideo) {
+        // Type changed, need to switch between video and image
+        g_logger->log(LOG_DEBUG, "Media type changed from {} to {}", 
+                      m_isVideo ? "video" : "image", 
+                      newIsVideo ? "video" : "image");
+        
+        if (newIsVideo) {
+            // Switch to video
+            if (m_image) {
+                m_null->removeChild(m_image);
+                m_image.reset();
+            }
+
+            CVideoElement::SCreateInfo videoInfo;
+            videoInfo.path = m_lastPath;
+            videoInfo.fitMode = static_cast<CVideoElement::eFitMode>(m_imagesData->fitMode);
+            videoInfo.audio = false;
+            videoInfo.loop = true;
+            videoInfo.backend = m_backend;
+            videoInfo.updateCallback = [this]() {
+                if (m_video)
+                    m_video->render();
+            };
+
+            m_video = CVideoElement::create(videoInfo);
+            if (m_video) {
+                // TODO: Get proper output size
+                m_video->resize(1920, 1080);
+                m_isVideo = true;
+            }
+        } else {
+            // Switch to image
+            if (m_video) {
+                m_video.reset();
+            }
+
+            m_image = Abysstoolkit::CImageBuilder::begin()
+                          ->path(std::string{m_lastPath})
+                          ->size({Abysstoolkit::CDynamicSize::HT_SIZE_PERCENT, Abysstoolkit::CDynamicSize::HT_SIZE_PERCENT, {1.F, 1.F}})
+                          ->sync(true)
+                          ->fitMode(m_imagesData->fitMode)
+                          ->commence();
+
+            m_image->setPositionMode(Abysstoolkit::IElement::HT_POSITION_ABSOLUTE);
+            m_image->setPositionFlag(Abysstoolkit::IElement::HT_POSITION_FLAG_CENTER, true);
+            m_null->addChild(m_image);
+            m_isVideo = false;
+        }
+    } else if (m_isVideo && m_video) {
+        // Reload video with new path
+        m_video.reset();
+        
+        CVideoElement::SCreateInfo videoInfo;
+        videoInfo.path = m_lastPath;
+        videoInfo.fitMode = static_cast<CVideoElement::eFitMode>(m_imagesData->fitMode);
+        videoInfo.audio = false;
+        videoInfo.loop = true;
+        videoInfo.backend = m_backend;
+        videoInfo.updateCallback = [this]() {
+            if (m_video)
+                m_video->render();
+        };
+
+        m_video = CVideoElement::create(videoInfo);
+        if (m_video) {
+            m_video->resize(1920, 1080);
+        }
+    } else if (!m_isVideo && m_image) {
+        // Reload image
+        m_image->rebuild()
+            ->path(std::string{m_lastPath})
+            ->size({Abysstoolkit::CDynamicSize::HT_SIZE_PERCENT, Abysstoolkit::CDynamicSize::HT_SIZE_PERCENT, {1.F, 1.F}})
+            ->sync(true)
+            ->fitMode(m_imagesData->fitMode)
+            ->commence();
+    }
 
     m_timer =
         m_backend->addTimer(std::chrono::milliseconds(std::chrono::seconds(m_imagesData->timeout)), [this](ASP<Abysstoolkit::CTimer> self, void*) { onRepeatTimer(); }, nullptr);

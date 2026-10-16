@@ -61,7 +61,11 @@ pkg_check_modules(
   abysstoolkit>=0.4.1
   abysswire
   pixman-1
-  libdrm)
+  libdrm
+  mpv
+  egl
+  glesv2
+  wayland-egl)
 
 file(GLOB_RECURSE SRCFILES "src/*.cpp")
 
@@ -149,10 +153,12 @@ target_link_libraries(
   abysspaper
   OpenGL
   GLESv2
+  EGL
   pthread
   magic
   ${CMAKE_THREAD_LIBS_INIT}
-  wayland-cursor)
+  wayland-cursor
+  wayland-egl)
 
 if(CMAKE_BUILD_TYPE MATCHES Debug OR CMAKE_BUILD_TYPE MATCHES DEBUG)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg -no-pie -fno-builtin")

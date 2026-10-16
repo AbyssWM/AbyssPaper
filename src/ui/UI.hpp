@@ -13,6 +13,7 @@
 #include <abyssutils/signal/Listener.hpp>
 
 #include "../helpers/Memory.hpp"
+#include "VideoElement.hpp"
 
 class CWallpaperTarget {
   public:
@@ -39,6 +40,8 @@ class CWallpaperTarget {
     SP<Abysstoolkit::CRectangleElement> m_bg;
     SP<Abysstoolkit::CImageElement>     m_image;
     SP<Abysstoolkit::CTextElement>      m_splash;
+    UP<CVideoElement>                   m_video;
+    bool                                m_isVideo = false;
 };
 
 class CUI {

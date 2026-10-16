@@ -23,22 +23,44 @@ AbyssPaper is a simple and fast wallpaper utility for [Abyssland](https://github
 - `cover`, `contain`, `tile` and `fill` modes
 - Fractional scaling support
 - IPC (`abysspaper_core`) for fast wallpaper switches
+- **🎬 Video wallpapers** (MP4, WebM, MKV, GIF, APNG) with hardware acceleration
+- **🔊 Optional audio** via PipeWire/PulseAudio (disabled by default)
+- **⚡ Zero-copy rendering** via EGL/GLES3 (OpenGL) with vaapi/nvdec fallback
 
-Abyssland also ships built-in wallpapers (`misc:force_default_wallpaper`). AbyssPaper is meant for your own images. Video, GIF and audio wallpapers are planned, but **not implemented yet**.
+Abyssland also ships built-in wallpapers (`misc:force_default_wallpaper`). AbyssPaper is meant for your own images and videos.
+
+See [VIDEO_SUPPORT.md](VIDEO_SUPPORT.md) for video/GIF configuration and requirements.
 
 ## Configuration
 
 `~/.config/abyss/abysspaper.conf`:
 
 ```ini
+# Static image
 wallpaper {
     monitor =
     path = ~/Pictures/wall.png
     fit_mode = cover
 }
+
+# Video wallpaper (NEW!)
+wallpaper {
+    monitor = DP-1
+    path = ~/Videos/animated.mp4
+    fit_mode = cover
+}
+
+# GIF wallpaper
+wallpaper {
+    monitor = eDP-1
+    path = ~/Pictures/loop.gif
+    fit_mode = contain
+}
 ```
 
 IPC socket: `$XDG_RUNTIME_DIR/abyss/$ABYSSLAND_INSTANCE_SIGNATURE/.abysspaper.sock`.
+
+**For video/GIF configuration and requirements, see [VIDEO_SUPPORT.md](VIDEO_SUPPORT.md).**
 
 ## Installation
 
@@ -52,7 +74,20 @@ The binary is `/opt/abyss/bin/abysspaper`.
 
 ### Dependencies
 
-Development files of: Abysstoolkit, Abyssparse, Abyssutils, Abysswire, Abyss-scanner, wayland-client, pixman, libdrm.
+**Runtime:**
+- Abysstoolkit, Abyssparse, Abyssutils, Abysswire
+- wayland-client, pixman, libdrm
+- **libmpv** (2.5.0+) – for video/GIF support
+- **EGL/GLES3** (Mesa or proprietary drivers) – for hardware-accelerated video
+- **libmagic** – for media type detection
+
+**Build:**
+Development files of all runtime dependencies plus: Abyss-scanner, mpv-devel, libva-devel, libglvnd-devel, libgbm-devel
+
+```bash
+# Void Linux
+sudo xbps-install -Sy mpv-devel libva-devel libglvnd-devel libgbm-devel libdrm-devel
+```
 
 ### Manual build
 
