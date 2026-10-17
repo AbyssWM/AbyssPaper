@@ -47,9 +47,6 @@ add_compile_options(-DWLR_USE_UNSTABLE)
 add_compile_options(-Wall -Wextra -Wno-unused-parameter -Wno-unused-value
                     -Wno-missing-field-initializers -Wno-narrowing)
 
-# Include abyss config system
-include(../Abysstoolkit/cmake/AbyssConfig.cmake)
-
 find_package(Threads REQUIRED)
 find_package(PkgConfig REQUIRED)
 find_package(abyss-scanner 0.4.0 REQUIRED)
@@ -69,6 +66,17 @@ pkg_check_modules(
   egl
   glesv2
   wayland-egl)
+
+# A standalone source archive has no adjacent Abysstoolkit checkout.
+pkg_get_variable(ABYSSTOOLKIT_PREFIX abysstoolkit prefix)
+find_file(ABYSS_CONFIG_MODULE
+  NAMES AbyssConfig.cmake
+  HINTS "${ABYSSTOOLKIT_PREFIX}/share/abysstoolkit/cmake"
+  PATH_SUFFIXES share/abysstoolkit/cmake)
+if(NOT ABYSS_CONFIG_MODULE)
+  message(FATAL_ERROR "Abysstoolkit's installed AbyssConfig.cmake was not found")
+endif()
+include("${ABYSS_CONFIG_MODULE}")
 
 file(GLOB_RECURSE SRCFILES "src/*.cpp")
 
