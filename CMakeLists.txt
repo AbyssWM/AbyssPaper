@@ -41,6 +41,16 @@ execute_process(
   OUTPUT_VARIABLE GIT_DIRTY
   OUTPUT_STRIP_TRAILING_WHITESPACE)
 
+# a package build unpacks the source tarball inside its packaging repository, where git would
+# describe that repository instead; its message may also hold ; or " which break the define
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/.git")
+  set(GIT_BRANCH "unknown")
+  set(GIT_COMMIT_HASH "unknown")
+  set(GIT_COMMIT_MESSAGE "unknown")
+  set(GIT_DIRTY "")
+endif()
+string(REGEX REPLACE "[\";\\]" " " GIT_COMMIT_MESSAGE "${GIT_COMMIT_MESSAGE}")
+
 include_directories(. hw-protocols protocols)
 set(CMAKE_CXX_STANDARD 23)
 add_compile_options(-DWLR_USE_UNSTABLE)
